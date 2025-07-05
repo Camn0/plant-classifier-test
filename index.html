@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Disease Classifier</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- TensorFlow.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <style>
+        /* Custom styles for a better look */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+        <div class="glass-card rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-100">Plant Disease Classifier</h1>
+                <p class="text-gray-400 mt-2">Upload an image of a plant leaf to identify its condition.</p>
+            </div>
+
+            <!-- Image Upload Section -->
+            <div class="mb-6">
+                <label for="image-upload" class="block mb-2 text-sm font-medium text-gray-300">Upload Image</label>
+                <input type="file" id="image-upload" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+            </div>
+
+            <!-- Image Preview and Prediction Result -->
+            <div id="content-area" class="text-center hidden">
+                <h2 class="text-2xl font-semibold text-gray-200 mb-4">Analysis</h2>
+                <div class="flex flex-col md:flex-row items-center justify-around gap-8">
+                    <!-- Image Preview -->
+                    <div class="w-full md:w-1/2">
+                         <img id="image-preview" class="rounded-xl shadow-lg mx-auto max-w-full h-auto" src="#" alt="Image Preview">
+                    </div>
+                   <!-- Prediction Result -->
+                    <div id="prediction-container" class="w-full md:w-1/2">
+                        <div id="loader" class="loader mx-auto my-8 hidden"></div>
+                        <div id="prediction-result" class="text-left hidden">
+                            <h3 class="text-xl font-medium text-gray-300 mb-2">Prediction:</h3>
+                            <p id="prediction-text" class="text-2xl font-bold text-green-400"></p>
+                            <p id="confidence-text" class="text-lg text-gray-400"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <div id="initial-message" class="text-center text-gray-500 py-10">
+                <p>Please upload an image to begin classification.</p>
+            </div>
+        </div>
+        <footer class="text-center mt-6 text-gray-500 text-sm">
+            <p>Powered by TensorFlow.js</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const imageUpload = document.getElementById('image-upload');
+        const imagePreview = document.getElementById('image-preview');
+        const predictionText = document.getElementById('prediction-text');
+        const confidenceText = document.getElementById('confidence-text');
+        const loader = document.getElementById('loader');
+        const predictionResult = document.getElementById('prediction-result');
+        const contentArea = document.getElementById('content-area');
+        const initialMessage = document.getElementById('initial-message');
+
+        // --- Model and Image Constants ---
+        const MODEL_PATH = './tfjs_model/model.json'; // IMPORTANT: Path to your converted model
+        const IMAGE_SIZE = 180;
+        // The class names must be in the same order as the model's output classes
+        const CLASS_NAMES = [
+            'Pepper_bell___Bacterial_spot', 'Pepper_bell___healthy', 'Potato___Early_blight',
+            'Potato___Late_blight', 'Potato___healthy', 'Tomato___Bacterial_spot',
+            'Tomato___Early_blight', 'Tomato___Late_blight', 'Tomato___Leaf_Mold',
+            'Tomato___Septoria_leaf_spot', 'Tomato___Spider_mites Two-spotted_spider_mite',
+            'Tomato___Target_Spot', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus',
+            'Tomato___Tomato_mosaic_virus', 'Tomato___healthy'
+        ];
+
+        let model;
+
+        // --- Main Application Logic ---
+
+        /**
+         * Load the trained TensorFlow.js model.
+         * This function is called once when the script loads.
+         */
+        async function loadModel() {
+            console.log("Loading model...");
+            try {
+                model = await tf.loadLayersModel(MODEL_PATH);
+                console.log("Model loaded successfully!");
+            } catch (err) {
+                console.error("Failed to load model:", err);
+                alert("Failed to load the model. Please ensure 'model.json' and related files are in the correct directory.");
+            }
+        }
+
+        /**
+         * Handle the image upload event.
+         * Reads the uploaded file, displays it, and triggers the prediction.
+         */
+        imageUpload.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // Show the content area and hide initial message
+            contentArea.classList.remove('hidden');
+            initialMessage.classList.add('hidden');
+            
+            // Display the image preview
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                imagePreview.src = e.target.result;
+                await predict(imagePreview);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        /**
+         * Preprocess the image and run prediction using the loaded model.
+         * @param {HTMLImageElement} imageElement The image element to classify.
+         */
+        async function predict(imageElement) {
+            if (!model) {
+                alert("Model is not loaded yet. Please wait.");
+                return;
+            }
+
+            // Show loader and hide previous results
+            loader.classList.remove('hidden');
+            predictionResult.classList.add('hidden');
+
+            // Preprocess the image
+            const tensor = tf.browser.fromPixels(imageElement)
+                .resizeNearestNeighbor([IMAGE_SIZE, IMAGE_SIZE])
+                .toFloat()
+                .div(tf.scalar(255.0)) // Normalize to [0, 1]
+                .expandDims();         // Add batch dimension
+
+            // Run prediction
+            const predictions = await model.predict(tensor).data();
+            
+            // Get the index of the highest prediction score
+            const topPredictionIndex = predictions.indexOf(Math.max(...predictions));
+            const predictedClass = CLASS_NAMES[topPredictionIndex];
+            const confidence = predictions[topPredictionIndex];
+
+            // Display the result
+            displayPrediction(predictedClass, confidence);
+            
+            // Clean up the tensor
+            tensor.dispose();
+        }
+        
+        /**
+         * Displays the prediction result on the UI.
+         * @param {string} className The predicted class name.
+         * @param {number} confidence The confidence score (0 to 1).
+         */
+        function displayPrediction(className, confidence) {
+            const formattedClassName = className.replace(/_/g, ' '); // Replace underscores with spaces
+            predictionText.innerText = formattedClassName;
+            confidenceText.innerText = `Confidence: ${(confidence * 100).toFixed(2)}%`;
+
+            // Hide loader and show result
+            loader.classList.add('hidden');
+            predictionResult.classList.remove('hidden');
+        }
+
+        // Load the model when the page loads
+        loadModel();
+
+    </script>
+</body>
+</html>
+
