@@ -1,4 +1,3 @@
-
 # Proyek Klasifikasi Penyakit Tanaman menggunakan CNN
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)
@@ -7,6 +6,8 @@
 ![Classification](https://img.shields.io/badge/Task-Image%20Classification-green?style=for-the-badge)
 
 Ini adalah proyek implementasi model **Convolutional Neural Network (CNN)** untuk mengklasifikasikan 15 jenis penyakit pada tanaman dari dataset `PlantVillage`. Model ini menggunakan teknik *data augmentation* dan *early stopping* untuk mencapai akurasi tinggi dan mencegah *overfitting*.
+
+<img width="804" height="812" alt="Untitled" src="https://github.com/user-attachments/assets/5d833721-c2f0-49a7-8c19-3ec6d5311ddc" />
 
 ## Ringkasan Model
 
@@ -112,6 +113,8 @@ Model menunjukkan peningkatan kinerja yang stabil pada data pelatihan dan valida
 ### 2\. Visualisasi Pelatihan
 
 Grafik di bawah menunjukkan bahwa model belajar secara konsisten dan tidak menunjukkan *overfitting* yang parah, karena akurasi validasi mengikuti tren akurasi pelatihan.
+<img width="1189" height="590" alt="Untitled" src="https://github.com/user-attachments/assets/53f4570e-3d45-4baa-aef8-4a8a76c04c18" />
+
 
 ### 3\. Evaluasi Akhir pada Test Set
 
@@ -142,7 +145,7 @@ Setelah pelatihan, model dievaluasi pada **Test Set** yang benar-benar baru, men
 
 ## Cara Menggunakan Model
 
-Anda dapat memuat citra baru dan menjalankan inferensi untuk mendapatkan prediksi kelas dan tingkat kepercayaan.
+Citra baru dan inferensi dapat dibuat dan dijalankan untuk mendapatkan prediksi kelas dan tingkat kepercayaan.
 
 ### 1\. Inferensi Satu Citra
 
@@ -166,6 +169,4 @@ predicted_class = class_names[np.argmax(score)].replace('_', ' ')
 confidence = 100 * np.max(score)
 
 print("Jenis daun adalah {} dengan akurasi {:0.2f}".format(predicted_class, confidence))
-```
-
 ```
